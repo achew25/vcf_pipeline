@@ -1,0 +1,2 @@
+Write the code for FASTA parsing
+Parse each id of FASTA identifier line into a dictionary
