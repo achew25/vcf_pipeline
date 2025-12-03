@@ -1,14 +1,13 @@
 # rp1b
 
 ## Planning - Writing functions for Making mutations writing code for:
-"""
+
 Cleaning FASTA files into base string
 Making mutations (SNPs, indels as defined functions)
 x30 depth with 100bp read sections on the mutated genomes - WIP 
 Use minimap (mapped to original reference genome)
 Apply bcftools
 Find precision and recall of SNP caller
-"""
 
 ## Use code to make the pipeline (nextflow):
 Map reads
