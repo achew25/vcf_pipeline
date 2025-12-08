@@ -9,8 +9,7 @@ def create_fastq(file_path_and_name, database_tag, which_fasta, mutated_fragment
     database_name = database_tag
 
     with open(file_path_and_name, 'w') as f:
-        for i in range(max_read_id):
-            
+        for i in range(max_read_id):           
             read_number = i + 1
             f.write(f"@{read_number}-->{database_name[which_fasta - 1]}\n")
             #Sequence
@@ -23,7 +22,7 @@ def create_fastq(file_path_and_name, database_tag, which_fasta, mutated_fragment
             f.write(f"{quality_score_line}\n")
 
             if len(mutated_fragments[read_number]) != len(quality_score_line):
-                print(f"Skipping read {read_number}: Sequence and quality lengths do not match.")
+                print(f"Skipping read {read_number - 1}: Sequence and quality lengths do not match.")
                 continue
             
     
