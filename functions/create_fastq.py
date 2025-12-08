@@ -25,5 +25,5 @@ def create_fastq(file_path_and_name, database_tag, which_fasta, mutated_fragment
                 print(f"Skipping read {read_number - 1}: Sequence and quality lengths do not match.")
                 continue
             
-    
-    return f"\nSuccessfully created FASTQ file in {file_path_and_name}"
+    print("\n")
+    return f"Successfully created FASTQ file in {file_path_and_name}"
