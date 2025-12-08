@@ -1,5 +1,12 @@
 def create_fastq(file_path_and_name, mutated_fragments, quality_score_ascii):
     #for key in sequence_details:
+    import os
+    output_directory = os.path.dirname(file_path_and_name)
+    if output_directory:
+        os.makedirs(output_directory, exist_ok=True)
+        
+    max_read_id = len(mutated_fragments)
+
     with open(file_path_and_name, 'w') as f:
         for i in range(max_read_id):
             read_id = 1
