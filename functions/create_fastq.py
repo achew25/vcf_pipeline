@@ -14,7 +14,7 @@ def create_fastq(file_path_and_name, database_tag, which_fasta, mutated_fragment
             read_number = i + 1
             f.write(f"@{read_number}-->{database_name[which_fasta - 1]}\n")
             #Sequence
-            f.write(f"{mutated_fragments[read_number]}\n")
+            f.write(f"{mutated_fragments[read_number - 1]}\n")
             #+ sign
             f.write("+\n")                
             #Quality Score
