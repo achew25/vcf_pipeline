@@ -18,10 +18,8 @@ def get_depth(mutated_sequence, depth_level, avg_fragment_length):
 
     # Report on first 4 fragments
     print(f"Getting fragments for {depth_level} depth:")
-    print(f"At {depth_level} depth, there were {fragments_per_depth_level} fragments of length {avg_fragment_length}.")
+    print(f"At each depth of {depth_level}, there were {fragments_per_depth_level} fragments of length {avg_fragment_length}.")
     print("Examples of fragments as follows: ", mutated_sequence_fragments[0:3])
-    #print(f"Check corresponding fragment start positions at: {fragment_start_pos[0]}, 
-          #{fragment_start_pos[1]}, {fragment_start_pos[2]}, {fragment_start_pos[3]}
-          #")
-    print(f"Check corresponding fragment start positions at: {fragment_start_pos[0]}, {fragment_start_pos[1]}, {fragment_start_pos[2]}, {fragment_start_pos[3]}")
+    print("Check corresponding fragment start positions at: ")
+    print(mutated_sequence_fragments[0:3]) 
     return mutated_sequence_fragments
