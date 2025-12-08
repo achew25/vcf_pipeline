@@ -19,7 +19,7 @@ def create_fastq(file_path_and_name, database_tag, which_fasta, mutated_fragment
             f.write("+\n")                
             #Quality Score
             #for base in range(len(mutated_fragments[read_id - 1])):
-            quality_score_line = quality_score_ascii * len(mutated_fragments[read_number])
+            quality_score_line = quality_score_ascii * len(mutated_fragments[read_number - 1])
             f.write(f"{quality_score_line}\n")
 
             if len(mutated_fragments[read_number]) != len(quality_score_line):
