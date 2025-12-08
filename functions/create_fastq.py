@@ -1,4 +1,4 @@
-def create_fastq(file_path_and_name, mutated_fragments, quality_score_ascii):
+def create_fastq(file_path_and_name, database_tag, which_fasta, mutated_fragments, quality_score_ascii):
     #for key in sequence_details:
     import os
     output_directory = os.path.dirname(file_path_and_name)
@@ -6,11 +6,13 @@ def create_fastq(file_path_and_name, mutated_fragments, quality_score_ascii):
         os.makedirs(output_directory, exist_ok=True)
         
     max_read_id = len(mutated_fragments)
+    database_name = database_tag
 
     with open(file_path_and_name, 'w') as f:
         for i in range(max_read_id):
+            
             read_number = i + 1
-            f.write(f"@{read_number}-->{fasta_details[0]}\n")
+            f.write(f"@{read_number}-->{database_name[which_fasta - 1]}\n")
             #Sequence
             f.write(f"{mutated_fragments[read_number]}\n")
             #+ sign
