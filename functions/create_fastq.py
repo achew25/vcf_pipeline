@@ -22,7 +22,7 @@ def create_fastq(file_path_and_name, database_tag, which_fasta, mutated_fragment
             quality_score_line = quality_score_ascii * len(mutated_fragments[read_number])
             f.write(f"{quality_score_line}\n")
 
-            if len(mutated_fragments[i]) != len(quality_score_ascii[i]):
+            if len(mutated_fragments[read_number]) != len(quality_score_line):
                 print(f"Skipping read {read_number}: Sequence and quality lengths do not match.")
                 continue
             
