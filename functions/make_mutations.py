@@ -2,7 +2,7 @@ def make_mutations(sequence, no_snp, no_indel, max_indel_length):
     #no_snp is number of SNPs to mutate genome with
     #no_indel is number of indels to mutate genome with
     #sequence is sequence returned from parse_fasta
-
+    print(f"Initialising mutations on sequence {sequence[:30]}..., with {no_snp} SNPs and {no_indel} indels of maximum {max_indel_length} bases long.")
     import random
     random.seed(123) #Maintain seed 123 throughout
     genome_length = len(sequence)
@@ -107,9 +107,10 @@ def make_mutations(sequence, no_snp, no_indel, max_indel_length):
     # Concatenate resulting sequence_list and return
     updated_string = "".join(sequence_list)
     # Give preview of updated string
+    print("Check here for string similarity in first 30 bases:")
     print(updated_string[:30])
-    print(indel_dictionary)
-    print(already_mutated)
-    print(snp_list)
-    print(deletion_positions)
+    print(f"Indels: {indel_dictionary}")
+    print(f"List of positions already mutated: \n{already_mutated}")
+    print(f"SNP positions: \n{snp_list}")
+    print(f"Deletion positions: \n{deletion_positions}")
     return updated_string

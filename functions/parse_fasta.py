@@ -18,4 +18,5 @@ def parse_fasta(file_path):
     print(fasta_dictionary[current_id][:30])
     print("Check the FASTA id:")
     print(fasta_dictionary.keys())
+    print("\n")
     return fasta_dictionary[current_id]
