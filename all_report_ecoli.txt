@@ -1,0 +1,33 @@
+[M::mm_idx_gen::0.174*1.02] collected minimizers
+[M::mm_idx_gen::0.210*1.18] sorted minimizers
+[M::main::0.210*1.18] loaded/built the index for 1 target sequence(s)
+[M::mm_mapopt_update::0.210*1.18] mid_occ = 1000
+[M::mm_idx_stat] kmer size: 21; skip: 11; is_hpc: 0; #seq: 1
+[M::mm_idx_stat::0.218*1.18] distinct minimizers: 757233 (99.27% are singletons); average occurrences: 1.021; average spacing: 6.004; total length: 4641652
+[M::worker_pipeline::10.044*1.70] mapped 500000 sequences
+[M::worker_pipeline::15.261*1.65] mapped 500001 sequences
+[M::worker_pipeline::16.710*1.61] mapped 392479 sequences
+[M::main] Version: 2.30-r1287
+[M::main] CMD: minimap2 -a -x sr EcoliK12-MG1655.fasta NC_000913.3.fastq
+[M::main] Real time: 16.820 sec; CPU: 27.019 sec; Peak RSS: 0.536 GB
+
+1392480 + 0 in total (QC-passed reads + QC-failed reads)
+1392480 + 0 primary
+0 + 0 secondary
+0 + 0 supplementary
+0 + 0 duplicates
+0 + 0 primary duplicates
+1392480 + 0 mapped (100.00% : N/A)
+1392480 + 0 primary mapped (100.00% : N/A)
+0 + 0 paired in sequencing
+0 + 0 read1
+0 + 0 read2
+0 + 0 properly paired (N/A : N/A)
+0 + 0 with itself and mate mapped
+0 + 0 singletons (N/A : N/A)
+0 + 0 with mate mapped to a different chr
+0 + 0 with mate mapped to a different chr (mapQ>=5)
+
+Note: none of --samples-file, --ploidy or --ploidy-file given, assuming all sites are diploid
+[mpileup] 1 samples in 1 input files
+[mpileup] maximum number of reads per input file set to -d 250
