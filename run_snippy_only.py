@@ -10,7 +10,9 @@ SAMTOOLS_TOOL = "samtools"
 FREEBAYES_TOOL = "freebayes"
 
 # Directory Constants
-INPUT_DIR = "data/raw"
+# INPUT_DIR is now split to reflect different file types
+REF_INPUT_DIR = "data/raw"      # For the large reference FASTA file
+READS_INPUT_DIR = "data/processed"  # FOR THE FASTQ READS (MUTATED SEQUENCE)
 OUTPUT_DIR = "data/snippy_only"
 
 
@@ -20,7 +22,6 @@ def run_command(command, step_name):
     print(f"Command: {' '.join(command)}")
     try:
         # Check=True will raise an exception for non-zero exit codes
-        # We redirect stdout/stderr to the console for real-time feedback
         subprocess.run(command, check=True, stdout=sys.stdout, stderr=sys.stderr)
     except subprocess.CalledProcessError as e:
         print(f"\n!!! ERROR in {step_name} !!!")
@@ -39,15 +40,18 @@ def main():
     
     parser.add_argument(
         "-r", "--reference", required=True, 
-        help=f"Filename of the reference genome FASTA file (.fa/.fasta) within the '{INPUT_DIR}' directory."
+        # Update help message to reflect REF_INPUT_DIR
+        help=f"Filename of the reference genome FASTA file (.fa/.fasta) within the '{REF_INPUT_DIR}' directory."
     )
     parser.add_argument(
         "-1", "--read1", required=True, 
-        help=f"Filename of the R1 (forward) sequencing reads FASTQ file (.fq/.fastq) within the '{INPUT_DIR}' directory."
+        # Update help message to reflect READS_INPUT_DIR
+        help=f"Filename of the R1 (forward) sequencing reads FASTQ file (.fq/.fastq) within the '{READS_INPUT_DIR}' directory."
     )
     parser.add_argument(
         "-2", "--read2", required=False, default=None,
-        help=f"Filename of the R2 (reverse) sequencing reads FASTQ file (.fq/.fastq) within the '{INPUT_DIR}' directory. (Optional)"
+        # Update help message to reflect READS_INPUT_DIR
+        help=f"Filename of the R2 (reverse) sequencing reads FASTQ file (.fq/.fastq) within the '{READS_INPUT_DIR}' directory. (Optional)"
     )
     parser.add_argument(
         "-o", "--output_prefix", required=True, 
@@ -57,35 +61,49 @@ def main():
     args = parser.parse_args()
 
     # Setup Directories
-    if not os.path.isdir(INPUT_DIR):
-        print(f"!!! WARNING: Input directory '{INPUT_DIR}' not found. Please create it and place your files inside.")
+    if not os.path.isdir(REF_INPUT_DIR):
+        print(f"!!! WARNING: Reference input directory '{REF_INPUT_DIR}' not found. Please create it and place your files inside.")
+    if not os.path.isdir(READS_INPUT_DIR):
+        print(f"!!! WARNING: Reads input directory '{READS_INPUT_DIR}' not found. Please create it and place your FASTQ files inside.")
     
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     print(f"Output directory '{OUTPUT_DIR}' ensured to exist.")
 
 
-    # Input Path Resolution
-    REF_FASTA = os.path.join(INPUT_DIR, args.reference)
-    R1_FASTQ = os.path.join(INPUT_DIR, args.read1)
+    # Input Path Resolution (Crucial Change Here)
+    REF_FASTA = os.path.join(REF_INPUT_DIR, args.reference)
+    
+    # Reads now use the new READS_INPUT_DIR path
+    R1_FASTQ = os.path.join(READS_INPUT_DIR, args.read1)
     
     if args.read2:
-        R2_FASTQ = os.path.join(INPUT_DIR, args.read2)
+        R2_FASTQ = os.path.join(READS_INPUT_DIR, args.read2)
         print("Running in PAIR-END mode.")
     else:
         R2_FASTQ = None
         print("Running in SINGLE-END mode (No --read2 provided).")
 
+    # Check for FASTQ file existence to preempt BWA error
+    if not os.path.exists(R1_FASTQ):
+        print(f"\n!!! ERROR: FASTQ read file not found at {R1_FASTQ} !!!", file=sys.stderr)
+        sys.exit(1)
+    if R2_FASTQ and not os.path.exists(R2_FASTQ):
+        print(f"\n!!! ERROR: R2 FASTQ read file not found at {R2_FASTQ} !!!", file=sys.stderr)
+        sys.exit(1)
+        
     #Output Path Resolution 
     BAM_UNSORTED = os.path.join(OUTPUT_DIR, f"{args.output_prefix}.unsorted.bam")
     BAM_SORTED = os.path.join(OUTPUT_DIR, f"{args.output_prefix}.sorted.bam")
     VCF_RAW = os.path.join(OUTPUT_DIR, f"{args.output_prefix}.raw.vcf")
     
     # 1. Index the Reference Genome (BWA)
+    # The reference FASTA must be indexed before alignment.
     run_command([BWA_TOOL, "index", REF_FASTA], "1. BWA Indexing")
 
     # 2. Align Reads to Reference (BWA MEM)
     print("\n>>> Running Step: 2. BWA Alignment (Piped)")
     
+    # BWA MEM command setup
     bwa_cmd = [BWA_TOOL, "mem", "-t", "4", REF_FASTA, R1_FASTQ] # -t for threads
     if R2_FASTQ:
         bwa_cmd.append(R2_FASTQ)
@@ -95,7 +113,7 @@ def main():
         # Start BWA MEM process
         bwa_process = subprocess.Popen(bwa_cmd, stdout=subprocess.PIPE, stderr=sys.stderr)
         
-        # Start SAMTOOLS view process (to convert SAM to BAM)
+        # Start SAMTOOLS view process (to convert SAM to BAM) 
         samtools_view_cmd = [SAMTOOLS_TOOL, "view", "-b", "-"] # -b for BAM, - for stdin
         samtools_view_process = subprocess.Popen(samtools_view_cmd, stdin=bwa_process.stdout, stdout=bam_out, stderr=sys.stderr)
         
@@ -117,7 +135,7 @@ def main():
     run_command([SAMTOOLS_TOOL, "sort", "-o", BAM_SORTED, BAM_UNSORTED], "3. SAMTOOLS Sort")
     run_command([SAMTOOLS_TOOL, "index", BAM_SORTED], "4. SAMTOOLS Index")
     
-    # 5. Variant Calling (FREEBAYES)
+    # 5. Variant Calling (FREEBAYES) 
     run_command(
         [
             FREEBAYES_TOOL,
