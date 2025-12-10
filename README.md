@@ -1,5 +1,6 @@
 # NGS Read Simulator and Pipeline for Mapping and Variant Calling
-## rp1b Tasks to complete in this exercise
+NOTE: See full documentation in documentation_and_discussion.pdf
+## University of Bath rp1b - Tasks to complete in this exercise
 
 ## Planning - Writing functions for Making mutations writing code for:
 
