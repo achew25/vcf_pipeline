@@ -1,5 +1,6 @@
 # NGS Read Simulator and Pipeline for Mapping and Variant Calling
 NOTE: See full documentation in documentation_and_discussion.pdf
+NOTE: Full documentation with Nextflow update found at Nextflow_Pipeline_Documentation.pdf
 ## University of Bath Project
 
 ## Planning - Writing functions for Making mutations writing code for:
