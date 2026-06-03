@@ -1,0 +1,251 @@
+#!/usr/bin/env nextflow
+
+nextflow.enable.dsl=2
+
+// Input Parameters
+params.fasta            = "${baseDir}/data/raw/EcoliK12-MG1655.fasta"
+params.real_fastq       = "${baseDir}/data/processed/SRR25083113_1.fastq"
+params.real_ref         = "${baseDir}/data/raw/GCF_000005845.2.fasta"
+params.snps             = 300
+params.indels           = 10
+params.depth            = 30
+params.read_len         = 100
+params.outdir           = "${baseDir}/data/processed"
+
+log.info """\
+    ========================================================================
+    NGS READ SIMULATOR, MAPPING & VARIANT CALLING PIPELINE
+    ========================================================================
+    Reference FASTA  : ${params.fasta}
+    Target Depth     : ${params.depth}x
+    Read Length      : ${params.read_len}bp
+    Simulated Vars   : ${params.snps} SNPs / ${params.indels} Indels
+    Real E. coli Data: ${params.real_fastq}
+    Output Directory : ${params.outdir}
+    ========================================================================
+"""
+
+process SIMULATE_MUTATIONS {
+    tag "Simulating ${params.snps} SNPs & ${params.indels} Indels"
+    publishDir "${params.outdir}", mode: 'copy'
+
+    input:
+    path fasta
+
+    output:
+    path "mutated_sequence.txt", emit: mutated_seq
+    path "ground_truth.txt",     emit: ground_truth
+
+    script:
+    """
+    python ${baseDir}/simulate_mutations.py ${fasta} \
+        --output-seq "mutated_sequence.txt" \
+        --output-gt "ground_truth.txt" \
+        --snps ${params.snps} \
+        --indels ${params.indels}
+    """
+}
+
+process SIMULATE_READS {
+    tag "Generating simulated reads at ${params.depth}x"
+    publishDir "${params.outdir}", mode: 'copy'
+
+    input:
+    path mutated_seq
+
+    output:
+    path "NC_000913.3.fastq", emit: simulated_fastq
+
+    script:
+    """
+    python ${baseDir}/simulate_reads.py NC_000913.3 \
+        --input-seq ${mutated_seq} \
+        --depth ${params.depth} \
+        --read_len ${params.read_len}
+    """
+}
+
+process ALIGN_READS {
+    tag "Mapping with minimap2"
+    publishDir "${params.outdir}", mode: 'copy'
+
+    input:
+    path ref_fasta
+    path fastq
+
+    output:
+    path "mapped_reads.bam", emit: bam
+    path "mapped_reads.bam.bai", emit: bai
+
+    script:
+    """
+    minimap2 -a -x sr ${ref_fasta} ${fastq} | \
+    samtools view -h -F 0x900 - | \
+    samtools sort -O bam > mapped_reads.bam
+    
+    samtools index mapped_reads.bam
+    """
+}
+
+process CALL_BCFTOOLS {
+    tag "Variant calling: bcftools"
+    publishDir "${params.outdir}", mode: 'copy'
+
+    input:
+    path ref_fasta
+    path bam
+    path bai
+
+    output:
+    path "bcftools_variants.vcf", emit: vcf
+
+    script:
+    """
+    bcftools mpileup -Ou -f ${ref_fasta} ${bam} | \
+    bcftools call -vc -Ov > bcftools_variants.vcf
+    """
+}
+
+process CALL_SNIPPY {
+    tag "Variant calling: snippy"
+    publishDir "${params.outdir}", mode: 'copy'
+
+    input:
+    path ref_fasta
+    path fastq
+
+    output:
+    path "ecoli_snippy.raw.vcf", emit: vcf
+
+    script:
+    // Uses the exact flag layout from your manual execution
+    """
+    python ${baseDir}/run_snippy_only.py \
+        --reference ${ref_fasta} \
+        --read1 ${fastq} \
+        --output_prefix ecoli_snippy
+    """
+}
+
+process MERGE_VCFS {
+    tag "Merging variant calls"
+    publishDir "${params.outdir}", mode: 'copy'
+
+    input:
+    path bcf_vcf
+    path snippy_vcf
+
+    output:
+    path "merged_samples.vcf", emit: merged_vcf
+
+    script:
+    """
+    python ${baseDir}/merge_vcfs.py ${bcf_vcf} ${snippy_vcf} -o merged_samples.vcf.gz
+    gunzip -k merged_samples.vcf.gz
+    """
+}
+
+process VALIDATE_METRICS {
+    tag "Calculating Precision/Recall"
+    publishDir "${params.outdir}", mode: 'copy'
+
+    input:
+    path ground_truth
+    path test_vcf
+
+    output:
+    path "${test_vcf.baseName}_metrics.txt"
+
+    script:
+    """
+    python ${baseDir}/calculate_metrics.py ${ground_truth} ${test_vcf} > ${test_vcf.baseName}_metrics.txt
+    """
+}
+
+// ---------------------------------------------------------
+// Main Workflow Entry
+// ---------------------------------------------------------
+
+workflow {
+    // Reference Channels
+    ref_ch = Channel.fromPath(params.fasta)
+    real_fastq_ch = Channel.fromPath(params.real_fastq)
+    real_ref_ch = Channel.fromPath(params.real_ref)
+
+    // STEP 1: Simulate mutations and reads
+    SIMULATE_MUTATIONS(ref_ch)
+    SIMULATE_READS(SIMULATE_MUTATIONS.out.mutated_seq)
+
+    // STEP 2: Alignment & Variant Calling (Simulated Set)
+    ALIGN_READS(ref_ch, SIMULATE_READS.out.simulated_fastq)
+    
+    // Concurrently execute both callers
+    CALL_BCFTOOLS(ref_ch, ALIGN_READS.out.bam, ALIGN_READS.out.bai)
+    CALL_SNIPPY(ref_ch, SIMULATE_READS.out.simulated_fastq)
+
+    // STEP 3: Merge VCF results
+    MERGE_VCFS(CALL_BCFTOOLS.out.vcf, CALL_SNIPPY.out.vcf)
+
+    // STEP 4: Validation calculations
+    VALIDATE_METRICS(SIMULATE_MUTATIONS.out.ground_truth, CALL_BCFTOOLS.out.vcf)
+    VALIDATE_METRICS(SIMULATE_MUTATIONS.out.ground_truth, CALL_SNIPPY.out.vcf)
+    VALIDATE_METRICS(SIMULATE_MUTATIONS.out.ground_truth, MERGE_VCFS.out.merged_vcf)
+
+    // STEP 5: Real-world Dataset Processing
+    ALIGN_REAL(real_ref_ch, real_fastq_ch)
+    CALL_BCFTOOLS_REAL(real_ref_ch, ALIGN_REAL.out.bam, ALIGN_REAL.out.bai)
+    SCORE_VCF_RECORDS(CALL_BCFTOOLS_REAL.out.vcf)
+}
+
+// Intermediary process steps handling the real dataset validation tracks
+process ALIGN_REAL {
+    tag "Mapping Real E. coli"
+    publishDir "${params.outdir}/real", mode: 'copy'
+    input: path ref, path fastq
+    output: path "real_mapped.bam", emit: bam; path "real_mapped.bam.bai", emit: bai
+    script:
+    """
+    minimap2 -a -x sr ${ref} ${fastq} | samtools view -h -F 0x900 - | samtools sort -O bam > real_mapped.bam
+    samtools index real_mapped.bam
+    """
+}
+
+process CALL_BCFTOOLS_REAL {
+    tag "Calling Real E. coli variants"
+    publishDir "${params.outdir}/real", mode: 'copy'
+    input: path ref, path bam, path bai
+    output: path "real_variants.vcf", emit: vcf
+    script:
+    """
+    bcftools mpileup -Ou -f ${ref} ${bam} | bcftools call -vc -Ov > real_variants.vcf
+    """
+}
+
+process SCORE_VCF_RECORDS {
+    tag "Assigning Trust/Accuracy Scores"
+    publishDir "${params.outdir}/real", mode: 'copy'
+
+    input:
+    path input_vcf
+
+    output:
+    path "scored_real_variants.vcf"
+
+    script:
+    """
+    # Custom post-processing script logic to evaluate trust metrics 
+    # (e.g., assessing QUAL score thresholds, Depth DP, and Allelic Frequency mapping)
+    awk 'BEGIN {OFS="\\t"} {
+        if (\$0 ~ /^#/) {
+            print \$0
+        } else {
+            # Basic validation logic checking QUAL score column 6
+            score = 0
+            if (\$6 > 100) score = 1.0
+            else if (\$6 > 50) score = 0.7
+            else score = 0.3
+            print \$0 ";TRUST_SCORE=" score
+        }
+    }' ${input_vcf} > scored_real_variants.vcf
+    """
+}
