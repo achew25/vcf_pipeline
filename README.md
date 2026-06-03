@@ -1,6 +1,6 @@
 # NGS Read Simulator and Pipeline for Mapping and Variant Calling
 NOTE: See full documentation in documentation_and_discussion.pdf
-## University of Bath rp1b - Tasks to complete in this exercise
+## University of Bath Project
 
 ## Planning - Writing functions for Making mutations writing code for:
 
@@ -17,7 +17,7 @@ Run 2 different variant callers (bcftools and snippy)
 Combine results into 1 VCF file
 
 ## Validation:
-Test code on Zam’s genomes and compare against my own validation set
+Test code on sample genomes and compare against my own validation set
 Run pipeline on one real E coli FASTQ and reference
 Assign each VCF record a score of how much you trust it (accuracy)
 
