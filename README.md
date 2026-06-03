@@ -27,6 +27,3 @@ Comment on precision /recall of tool on simulated data
 Is the combined VCF better than either?
 Walk through how it performed on real data
 Does tview support your high/low scores?
-
-Submit in github
-
